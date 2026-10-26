@@ -1,0 +1,7 @@
+# 统一换行符，保证任何平台检出的源码重新构建都得到同一个成品
+* text=auto eol=lf
+
+# 二进制产物不做换行转换
+*.zip binary
+*.jpg binary
+*.png binary

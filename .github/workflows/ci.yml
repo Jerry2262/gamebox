@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # 成品是提交进仓库的，必须能由源码原样重建
+      - name: Build and compare the committed artifact
+        run: |
+          python3 build-single.py
+          git diff --exit-code -- 游戏盒子.html
+
+      - name: Self-checks without a browser
+        run: |
+          node tests/spider.test.cjs
+          node tests/standalone.test.cjs

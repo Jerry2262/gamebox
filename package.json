@@ -1,0 +1,11 @@
+{
+  "name": "offline-gamebox",
+  "private": true,
+  "description": "Offline Chinese games; development tools only, not needed to play",
+  "scripts": {
+    "test": "node tests/offline.cjs",
+    "test:unit": "node tests/spider.test.cjs && node tests/standalone.test.cjs",
+    "test:release": "node tests/release.test.cjs"
+  },
+  "devDependencies": {"playwright": "1.58.2"}
+}

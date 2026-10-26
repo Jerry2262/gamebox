@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>俄罗斯方块 · 游戏盒子</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f5f2;color:#26382e;font:18px/1.6 system-ui,"Microsoft YaHei","PingFang SC",sans-serif}a{color:#2e6447}header{position:sticky;top:0;z-index:10;background:#f3f5f2;max-width:1000px;margin:auto;padding:22px 28px 12px;display:flex;align-items:center;justify-content:space-between;gap:16px}header a{text-decoration:none;font-weight:650}header span{font-size:15px;color:#637468}main{max-width:1000px;margin:auto;padding:0 28px 24px}h1{font-size:30px;margin:2px 0 4px;letter-spacing:2px}.intro{margin:0 0 18px;color:#627368;font-size:16px}#game-container{display:flex;gap:26px;align-items:flex-start;justify-content:center;background:#fff;border:1px solid #dce4dc;border-radius:20px;padding:24px;box-shadow:0 8px 35px #223d2410}#game-info{width:250px;flex-shrink:0;display:flex;flex-direction:column;gap:16px}#game-area{position:relative;width:min(40vh,320px);min-width:220px;line-height:0}#game-canvas{width:100%;height:auto;border:3px solid #334d40;border-radius:10px;display:block;outline:none}#game-canvas:focus-visible{outline:3px solid #d09a35;outline-offset:4px}.card{border-radius:12px;background:#f3f6f2;padding:14px 18px}h2,h3{margin:0 0 10px;font-size:19px}#next-piece{text-align:center}#next-canvas{background:#222;border-radius:8px;width:96px;height:96px}.info-item{display:flex;justify-content:space-between;margin:4px 0}.info-item span:last-child{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}button{font:inherit;font-weight:650;min-height:46px;border:1px solid #c6d3c8;border-radius:9px;padding:9px 18px;background:#fff;color:#294c38;cursor:pointer}button:hover{background:#e6eee5}button:focus-visible,a:focus-visible{outline:3px solid #d09a35;outline-offset:3px}button:disabled{opacity:.45;cursor:default}.primary{background:#37684c;color:#fff;border-color:#37684c}.primary:hover{background:#29533b}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.actions .primary{grid-column:1/-1}#controls{font-size:16px}#controls div{margin:4px 0}#debug-info{font-size:15px;color:#627368;line-height:1.6;min-height:48px}#game-overlay{position:absolute;inset:0;display:flex;justify-content:center;align-items:center;background:#15291fe6;border-radius:10px;line-height:1.6;padding:15px}.screen{text-align:center;color:#fff}.screen h2{font-size:25px;color:#f3d495}.screen p{font-size:16px}.hidden{display:none!important}.touch-controls{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.touch-controls button{padding:6px;font-size:16px}.touch-controls button:last-child{grid-column:1/-1}footer{font-size:13px;color:#66786b;text-align:center;padding:16px}footer a{color:inherit} @media(max-width:650px){header{padding:16px}main{padding:0 12px}h1{font-size:26px}#game-container{padding:14px;gap:14px;flex-direction:column;align-items:center}#game-info{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px}#next-piece{display:none}.actions,#debug-info,.touch-controls{grid-column:1/-1}#game-area{width:min(65vw,300px);min-width:0}.card{padding:12px}header span{font-size:13px}}
+</style>
+</head>
+<body>
+<header><a id="home-link" href="index.html">← 返回首页</a></header>
+<main>
+<h1>俄罗斯方块</h1>
+<p class="intro">← → 移动，↑ 旋转，↓ 加速，空格落到底。拼满一行就能消除。</p>
+<div id="game-container">
+<aside id="game-info" aria-label="游戏信息与操作">
+<div class="actions"><button id="start-button" class="primary">开始游戏</button><button id="pause-button" disabled>暂停</button><button id="replay-button">重玩</button></div>
+<div id="score-info" class="card"><div class="info-item"><span>得分</span><span id="score">0</span></div><div class="info-item"><span>等级</span><span id="level">1</span></div><div class="info-item"><span>消除行数</span><span id="lines">0</span></div></div>
+<div id="next-piece" class="card"><h3>下一个方块</h3><canvas id="next-canvas" width="120" height="120" aria-label="下一个方块预览"></canvas></div>
+<div id="controls" class="card"><h3>操作说明</h3><div>← → 左右移动</div><div>↑ 旋转方块</div><div>↓ 加速下落</div><div>空格 直接落到底</div><div>按 P 或 Esc 暂停 / 继续</div></div>
+<div class="touch-controls" aria-label="鼠标操作"><button data-key="ArrowLeft" aria-label="向左移动">← 左</button><button data-key="ArrowUp" aria-label="旋转方块">↑ 旋转</button><button data-key="ArrowRight" aria-label="向右移动">右 →</button><button data-key="ArrowDown" aria-label="加速下落">↓ 下</button><button data-key=" ">直接落到底</button></div>
+<div id="debug-info" role="status" aria-live="polite">准备好了，点击开始游戏。</div>
+</aside>
+<div id="game-area"><canvas id="game-canvas" width="400" height="800" tabindex="0" aria-label="俄罗斯方块棋盘，使用方向键和空格操作"></canvas>
+<div id="game-overlay"><div id="menu-screen" class="screen"><h2>准备开始</h2><p>点击左侧「开始游戏」<br>方向键移动，空格落到底</p></div><div id="pause-screen" class="screen hidden"><h2>已暂停</h2><p>休息一下，方块会等你。</p><button id="resume-button" class="primary">继续游戏</button></div><div id="game-over-screen" class="screen hidden"><h2>本局结束</h2><p>本局得分：<span id="final-score">0</span></p><button id="restart-button" class="primary">再玩一局</button></div></div>
+</div>
+</div>
+</main>
+<script>
+        const BOARD_WIDTH = 10;
+        const BOARD_HEIGHT = 20;
+        const BLOCK_SIZE = 40;
+
+        const COLORS = {
+          I: '#00f0f0', O: '#f0f000', T: '#a000f0', S: '#00f000',
+          Z: '#f00000', J: '#0000f0', L: '#f0a000'
+        };
+
+        // Use the WORKING rotation states from debug version
+        const PIECES = {
+          I: [
+            [[1,1,1,1]], // Horizontal line
+            [[1],[1],[1],[1]], // Vertical line
+            [[1,1,1,1]], // Horizontal again 
+            [[1],[1],[1],[1]] // Vertical again
+          ],
+          T: [
+            [[0,1,0],[1,1,1]], // T pointing up
+            [[1,0],[1,1],[1,0]], // T pointing right
+            [[1,1,1],[0,1,0]], // T pointing down
+            [[0,1],[1,1],[0,1]] // T pointing left
+          ],
+          O: [
+            [[1,1],[1,1]], // Square (all same)
+            [[1,1],[1,1]],
+            [[1,1],[1,1]],
+            [[1,1],[1,1]]
+          ],
+          L: [
+            [[1,0,0],[1,1,1]], // L shape
+            [[1,1],[1,0],[1,0]], // Rotated 90°
+            [[1,1,1],[0,0,1]], // Rotated 180°
+            [[0,1],[0,1],[1,1]] // Rotated 270°
+          ],
+          J: [
+            [[0,0,1],[1,1,1]], // J shape
+            [[1,0],[1,0],[1,1]], // Rotated 90°
+            [[1,1,1],[1,0,0]], // Rotated 180°
+            [[1,1],[0,1],[0,1]] // Rotated 270°
+          ],
+          S: [
+            [[0,1,1],[1,1,0]], // S shape
+            [[1,0],[1,1],[0,1]], // Rotated 90°
+            [[0,1,1],[1,1,0]], // Same as 0°
+            [[1,0],[1,1],[0,1]] // Same as 90°
+          ],
+          Z: [
+            [[1,1,0],[0,1,1]], // Z shape
+            [[0,1],[1,1],[1,0]], // Rotated 90°
+            [[1,1,0],[0,1,1]], // Same as 0°
+            [[0,1],[1,1],[1,0]] // Same as 90°
+          ]
+        };
+
+        class FinalTetris {
+          constructor() {
+            this.canvas = document.getElementById('game-canvas');
+            this.ctx = this.canvas.getContext('2d');
+            this.nextCanvas = document.getElementById('next-canvas');
+            this.nextCtx = this.nextCanvas.getContext('2d');
+            this.debugInfo = document.getElementById('debug-info');
+            
+            this.reset();
+            this.setupGame();
+          }
+
+          reset() {
+            this.board = Array(BOARD_HEIGHT).fill().map(() => Array(BOARD_WIDTH).fill(0));
+            this.currentPiece = null;
+            this.nextPiece = null;
+            this.score = 0;
+            this.level = 1;
+            this.lines = 0;
+            this.gameOver = false;
+            this.gameRunning = false;
+            this.started = false;
+            this.paused = false;
+            this.gameInterval = null;
+            this.updateUI();
+          }
+
+          setupGame() {
+            const startBtn = document.getElementById('start-button');
+            const restartBtn = document.getElementById('restart-button');
+            
+            startBtn.addEventListener('click', () => this.start());
+            restartBtn.addEventListener('click', () => this.restart());
+            document.getElementById('replay-button').addEventListener('click', () => this.restart());
+            document.getElementById('pause-button').addEventListener('click', () => this.togglePause());
+            document.getElementById('resume-button').addEventListener('click', () => this.togglePause());
+            document.querySelectorAll('[data-key]').forEach(button => button.addEventListener('click', () => {
+              this.handleInput({key: button.dataset.key, preventDefault() {}});
+              this.canvas.focus({preventScroll: true});
+            }));
+            document.addEventListener('visibilitychange', () => {
+              if (document.hidden && this.gameRunning) this.togglePause();
+            });
+            
+            // Ensure event listeners work
+            document.addEventListener('keydown', (e) => this.handleInput(e));
+            // One document listener only: canvas events bubble here.
+            
+            this.canvas.setAttribute('tabindex', '0');
+            this.canvas.addEventListener('click', () => {
+              this.canvas.focus({preventScroll: true});
+              this.updateDebugInfo();
+            });
+            
+            this.spawnPiece();
+            this.render();
+          }
+
+          spawnPiece() {
+            if (this.gameOver) return;
+            
+            const types = Object.keys(PIECES);
+            const type = this.nextPiece ? this.nextPiece.type : types[Math.floor(Math.random() * types.length)];
+            
+            this.currentPiece = {
+              type: type,
+              rotation: 0,
+              x: Math.floor(BOARD_WIDTH / 2) - 1,
+              y: 0
+            };
+            
+            // Check game over
+            if (!this.isValidPosition()) {
+              this.endGame();
+              return;
+            }
+            
+            // Generate next piece
+            const nextType = types[Math.floor(Math.random() * types.length)];
+            this.nextPiece = {
+              type: nextType,
+              rotation: 0
+            };
+            
+            this.updateDebugInfo();
+          }
+
+          getCurrentShape(piece = this.currentPiece) {
+            if (!piece) return [];
+            return PIECES[piece.type][piece.rotation];
+          }
+
+          start() {
+            if (this.started) return;
+            this.started = true;
+            this.hideScreen();
+            this.gameRunning = true;
+            this.canvas.focus({preventScroll: true});
+            this.updateUI();
+            this.updateDebugInfo();
+            this.render();
+            this.gameLoop();
+          }
+
+          restart() {
+            this.clearGameInterval();
+            this.reset();
+            this.spawnPiece();
+            this.hideScreen();
+            this.gameRunning = true;
+            this.canvas.focus({preventScroll: true});
+            this.started = true;
+            this.updateUI();
+            this.updateDebugInfo();
+            this.render();
+            this.gameLoop();
+          }
+
+          togglePause() {
+            if (!this.started || this.gameOver) return;
+            this.paused = !this.paused;
+            this.gameRunning = !this.paused;
+            if (this.paused) {
+              this.clearGameInterval();
+              document.getElementById('game-overlay').classList.remove('hidden');
+              document.getElementById('pause-screen').classList.remove('hidden');
+            } else {
+              this.hideScreen();
+              this.gameLoop();
+              this.canvas.focus({preventScroll: true});
+            }
+            this.updateUI();
+            this.updateDebugInfo();
+          }
+
+          gameLoop() {
+            if (this.gameInterval) {
+              clearInterval(this.gameInterval);
+            }
+            
+            this.gameInterval = setInterval(() => {
+              if (!this.gameOver && this.gameRunning) {
+                this.update();
+                this.render();
+              }
+            }, Math.max(150, 900 - (this.level - 1) * 60));
+          }
+
+          update() {
+            if (this.gameOver || !this.currentPiece) return;
+            
+            if (this.canMove(0, 1)) {
+              this.currentPiece.y++;
+            } else {
+              this.lockPiece();
+              this.clearLines();
+              this.spawnPiece();
+            }
+          }
+
+          canMove(dx, dy, newRotation = this.currentPiece ? this.currentPiece.rotation : 0) {
+            if (!this.currentPiece) return false;
+            
+            const testPiece = {
+              type: this.currentPiece.type,
+              rotation: newRotation,
+              x: this.currentPiece.x + dx,
+              y: this.currentPiece.y + dy
+            };
+            
+            return this.isValidPosition(testPiece);
+          }
+
+          isValidPosition(piece = this.currentPiece) {
+            if (!piece) return false;
+            
+            const shape = this.getCurrentShape(piece);
+            
+            for (let y = 0; y < shape.length; y++) {
+              for (let x = 0; x < shape[y].length; x++) {
+                if (shape[y][x]) {
+                  const boardX = piece.x + x;
+                  const boardY = piece.y + y;
+                  
+                  if (boardX < 0 || boardX >= BOARD_WIDTH || 
+                      boardY < 0 || boardY >= BOARD_HEIGHT || 
+                      this.board[boardY][boardX]) {
+                    return false;
+                  }
+                }
+              }
+            }
+            return true;
+          }
+
+          lockPiece() {
+            if (!this.currentPiece) return;
+            
+            const shape = this.getCurrentShape();
+            for (let y = 0; y < shape.length; y++) {
+              for (let x = 0; x < shape[y].length; x++) {
+                if (shape[y][x]) {
+                  const boardX = this.currentPiece.x + x;
+                  const boardY = this.currentPiece.y + y;
+                  if (boardY >= 0 && boardY < BOARD_HEIGHT && 
+                      boardX >= 0 && boardX < BOARD_WIDTH) {
+                    this.board[boardY][boardX] = this.currentPiece.type;
+                  }
+                }
+              }
+            }
+          }
+
+          clearLines() {
+            let linesCleared = 0;
+            for (let y = BOARD_HEIGHT - 1; y >= 0; y--) {
+              if (this.board[y].every(cell => cell !== 0)) {
+                this.board.splice(y, 1);
+                this.board.unshift(Array(BOARD_WIDTH).fill(0));
+                linesCleared++;
+                y++;
+              }
+            }
+            if (linesCleared > 0) {
+              this.lines += linesCleared;
+              const scoreMultipliers = [0, 40, 100, 300, 1200];
+              this.score += scoreMultipliers[linesCleared] * this.level;
+              this.level = Math.floor(this.lines / 10) + 1;
+              this.updateUI();
+              this.gameLoop();
+            }
+          }
+
+          endGame() {
+            this.gameOver = true;
+            this.gameRunning = false;
+            this.clearGameInterval();
+            this.showGameOver();
+            this.updateUI();
+            this.updateDebugInfo();
+          }
+
+          clearGameInterval() {
+            if (this.gameInterval) {
+              clearInterval(this.gameInterval);
+              this.gameInterval = null;
+            }
+          }
+
+          handleInput(e) {
+            // A focused button or link owns Enter/Space; do not turn it into a drop.
+            const control = e.target instanceof Element &&
+              e.target.closest('button, a, input, select, textarea, [contenteditable]');
+            if (control && (e.key === ' ' || e.key === 'Enter')) return;
+            if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+              if (!e.repeat) this.togglePause();
+              e.preventDefault();
+              return;
+            }
+            if ((e.key === ' ' || e.key === 'ArrowUp') && e.repeat) { e.preventDefault(); return; }
+            if (this.gameOver || !this.gameRunning || !this.currentPiece) return;
+            
+            let moved = false;
+            
+            switch(e.key) {
+              case 'ArrowLeft':
+                if (this.canMove(-1, 0)) {
+                  this.currentPiece.x--;
+                  moved = true;
+                }
+                break;
+              case 'ArrowRight':
+                if (this.canMove(1, 0)) {
+                  this.currentPiece.x++;
+                  moved = true;
+                }
+                break;
+              case 'ArrowDown':
+                if (this.canMove(0, 1)) {
+                  this.currentPiece.y++;
+                  this.score += 1;
+                  moved = true;
+                  this.updateUI();
+                }
+                break;
+              case 'ArrowUp':
+                if (this.rotatePiece()) {
+                  moved = true;
+                }
+                break;
+              case ' ':
+                let dropDistance = 0;
+                while (this.canMove(0, 1)) {
+                  this.currentPiece.y++;
+                  dropDistance++;
+                }
+                {
+                  this.score += dropDistance * 2;
+                  this.lockPiece();
+                  this.clearLines();
+                  this.spawnPiece();
+                  this.updateUI();
+                  moved = true;
+                }
+                e.preventDefault();
+                break;
+            }
+            
+            if (moved) {
+              this.render();
+              this.updateDebugInfo();
+            }
+            
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+              e.preventDefault();
+            }
+          }
+
+          rotatePiece() {
+            if (!this.currentPiece) return false;
+            
+            const oldRotation = this.currentPiece.rotation;
+            const newRotation = (oldRotation + 1) % 4;
+
+            
+            // Try rotation
+            if (this.canMove(0, 0, newRotation)) {
+              this.currentPiece.rotation = newRotation;
+
+              return true;
+            }
+            
+            // Try wall kicks
+            const kicks = [[-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0]];
+            
+            for (const [dx, dy] of kicks) {
+              if (this.canMove(dx, dy, newRotation)) {
+                this.currentPiece.x += dx;
+                this.currentPiece.y += dy;
+                this.currentPiece.rotation = newRotation;
+
+                return true;
+              }
+            }
+
+            return false;
+          }
+
+          updateDebugInfo() {
+            this.debugInfo.textContent = this.gameOver ? '本局结束，点击重玩再来一局。' :
+              this.paused ? '已暂停，点击继续游戏。' :
+              this.gameRunning ? '游戏中 · 方向键移动，空格落到底。' : '准备好了，点击开始游戏。';
+          }
+
+          render() {
+            // Clear canvas
+            this.ctx.fillStyle = '#222';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            // Draw grid
+            this.ctx.strokeStyle = '#444';
+            this.ctx.lineWidth = 1;
+            for (let x = 0; x <= BOARD_WIDTH; x++) {
+              this.ctx.beginPath();
+              this.ctx.moveTo(x * BLOCK_SIZE, 0);
+              this.ctx.lineTo(x * BLOCK_SIZE, BOARD_HEIGHT * BLOCK_SIZE);
+              this.ctx.stroke();
+            }
+            for (let y = 0; y <= BOARD_HEIGHT; y++) {
+              this.ctx.beginPath();
+              this.ctx.moveTo(0, y * BLOCK_SIZE);
+              this.ctx.lineTo(BOARD_WIDTH * BLOCK_SIZE, y * BLOCK_SIZE);
+              this.ctx.stroke();
+            }
+            
+            // Draw board
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+              for (let x = 0; x < BOARD_WIDTH; x++) {
+                if (this.board[y][x]) {
+                  this.drawBlock(x, y, COLORS[this.board[y][x]]);
+                }
+              }
+            }
+            
+            // Draw current piece
+            if (this.currentPiece && !this.gameOver) {
+              const shape = this.getCurrentShape();
+              for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                  if (shape[y][x]) {
+                    const boardX = this.currentPiece.x + x;
+                    const boardY = this.currentPiece.y + y;
+                    if (boardY >= 0) {
+                      this.drawBlock(boardX, boardY, COLORS[this.currentPiece.type]);
+                    }
+                  }
+                }
+              }
+            }
+            
+            // Draw next piece
+            this.nextCtx.fillStyle = '#222';
+            this.nextCtx.fillRect(0, 0, this.nextCanvas.width, this.nextCanvas.height);
+            
+            if (this.nextPiece && !this.gameOver) {
+              const shape = PIECES[this.nextPiece.type][0];
+              const blockSize = 25;
+              const offsetX = (this.nextCanvas.width - shape[0].length * blockSize) / 2;
+              const offsetY = (this.nextCanvas.height - shape.length * blockSize) / 2;
+              
+              for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                  if (shape[y][x]) {
+                    this.nextCtx.fillStyle = COLORS[this.nextPiece.type];
+                    this.nextCtx.fillRect(offsetX + x * blockSize, offsetY + y * blockSize, blockSize, blockSize);
+                    this.nextCtx.strokeStyle = '#000';
+                    this.nextCtx.strokeRect(offsetX + x * blockSize, offsetY + y * blockSize, blockSize, blockSize);
+                  }
+                }
+              }
+            }
+          }
+
+          drawBlock(x, y, color) {
+            this.ctx.fillStyle = color;
+            this.ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+            this.ctx.strokeStyle = '#000';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+          }
+
+          updateUI() {
+            const pauseButton = document.getElementById('pause-button');
+            pauseButton.disabled = !this.started || this.gameOver;
+            pauseButton.textContent = this.paused ? '继续游戏' : '暂停';
+            document.getElementById('start-button').disabled = this.started;
+            document.getElementById('score').textContent = this.score.toLocaleString();
+            document.getElementById('level').textContent = this.level;
+            document.getElementById('lines').textContent = this.lines;
+          }
+
+          showGameOver() {
+            document.getElementById('final-score').textContent = this.score.toLocaleString();
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('pause-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.remove('hidden');
+            document.getElementById('game-overlay').classList.remove('hidden');
+          }
+
+          hideScreen() {
+            document.getElementById('game-overlay').classList.add('hidden');
+            document.getElementById('menu-screen').classList.add('hidden');
+            document.getElementById('pause-screen').classList.add('hidden');
+            document.getElementById('game-over-screen').classList.add('hidden');
+          }
+        }
+
+        // Start the final working game
+        window.addEventListener('DOMContentLoaded', () => {
+          window.tetrisGame = new FinalTetris();
+        });
+    </script>
+</body>
+</html>

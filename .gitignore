@@ -1,0 +1,9 @@
+# 开发与测试产物，不参与交付（发布包由 pack.py 生成，只含成品和使用说明）
+node_modules/
+.browsers/
+.browser-home/
+.browser-config/
+.browser-cache/
+.release-check/
+tests/*.png
+__pycache__/
