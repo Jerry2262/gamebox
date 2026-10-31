@@ -12,6 +12,10 @@
 
 ## 快速开始
 
+在线试玩：打开 <https://jerry2262.github.io/gamebox/>，点想玩的游戏。
+
+离线使用：
+
 1. 下载 [`游戏盒子.html`](游戏盒子.html)
 2. 放到桌面，双击，用 Microsoft Edge 打开
 3. 点想玩的游戏
@@ -61,9 +65,10 @@ pack.py                构建并打包发布 zip
 tests/                 四个自检脚本
 VERSION                版本号唯一来源
 docs/screenshots/      README 截图
+.github/workflows/     CI 检查；pages.yml 把 gamebox/ 发布到 GitHub Pages
 ```
 
-分文件版是把两款游戏作为独立 HTML 放在 `gamebox/`，首页在 `gamebox/index.html`；单文件版用 `iframe.srcdoc` 内嵌这两页，游戏里的“返回首页”通过 `postMessage` 通知父页面卸载 iframe，从而停掉游戏定时器。全程没有外部请求、ES module 或 Web Worker。
+分文件版是把两款游戏作为独立 HTML 放在 `gamebox/`，首页在 `gamebox/index.html`；单文件版用 `iframe.srcdoc` 内嵌这两页，游戏里的“返回首页”通过 `postMessage` 通知父页面卸载 iframe，从而停掉游戏定时器。全程没有外部请求、ES module 或 Web Worker。`gamebox/` 目录同时是 GitHub Pages 站点的根目录，由 `.github/workflows/pages.yml` 在推送 `main` 时发布。
 
 ## 版本
 
